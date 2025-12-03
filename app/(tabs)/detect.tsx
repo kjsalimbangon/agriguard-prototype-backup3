@@ -33,7 +33,7 @@ export default function DetectScreen() {
     analyzeImage, 
     detectionHistory,
     refreshData 
-  } = usePestDetection(cameraRef);
+  } = usePestDetection();
 
   useEffect(() => {
     requestPermission();
