@@ -191,6 +191,7 @@ export interface DeviceStatus {
   deviceId: string;
   online: boolean;
   batteryLevel?: number;
+  tankStatus?: 'full' | 'empty' | 'unknown';
   waterLevel?: number;
   lastActivity: string;
   currentAction?: 'idle' | 'spraying' | 'error';
@@ -257,6 +258,11 @@ class MQTTService {
       await this.client.subscribe('/esp32/sprinkler/status', (message) => {
         this.handleStatusUpdate(message);
       });
+      await this.client.subscribe('/esp32/sprinkler/sensor/tank', (message) => {
+        console.log("Tank topic received:", message);
+        this.handleTankUpdate(message);
+      });
+
 
       this.resetTimeout();
       console.log('MQTT Service initialized successfully');
@@ -277,6 +283,8 @@ class MQTTService {
     try {
       await this.client.unsubscribe('/esp32/sprinkler/status');
       await this.client.disconnect();
+      await this.client.unsubscribe('/esp32/sprinkler/sensor/tank');
+
       console.log('MQTT Service disconnected');
     } catch (error) {
       console.error('Error during MQTT disconnect:', error);
@@ -360,6 +368,26 @@ class MQTTService {
       }
     }
   }
+  private handleTankUpdate(message: string): void {
+    const val = message.trim();
+
+    let tankStatus: 'full' | 'empty' | 'unknown' = 'unknown';
+    let waterLevel = 0;
+
+    if (val === '1') {
+      tankStatus = 'full';
+      waterLevel = 100;
+    } else if (val === '0') {
+      tankStatus = 'empty';
+      waterLevel = 0;
+    }
+
+    this.updateDeviceStatus({
+      tankStatus,
+      waterLevel,
+    });
+}
+
 
   addStatusCallback(callback: (status: DeviceStatus) => void): void {
     this.statusCallbacks.push(callback);
